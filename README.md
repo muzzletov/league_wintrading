@@ -7,7 +7,7 @@ team who would ideally have the win trading app installed on their phone.
 
 Once you issue a request, the request notification pops up at the player's
 phone. \
-He/she is can then choose to give a win to you in some way or another - for example, by not playing as eagerly. 
+He/she can then choose to give a win to you in some way or another - for example, by not playing as eagerly. 
 
 ### TODO:
 - ~~extract configuration into environment variables~~
