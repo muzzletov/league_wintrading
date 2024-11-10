@@ -1,0 +1,175 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fcm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fcm
+  template:
+    metadata:
+      labels:
+        app: fcm
+    spec:
+      containers:
+        - name: fcm
+          imagePullPolicy: Never
+          image: fcm
+          env:
+            - name: FCM_PROJECT_ID
+              value: "wintrading"
+            - name: FCM_APP_HOST
+              value: "0.0.0.0"
+            - name: FCM_APP_PORT
+              value: "5551"
+            - name: VKEY_HOST
+              value: "vkey-service"
+            - name: VKEY_PORT
+              value: "6379"
+            - name: VKEY_PASSWORD
+              value: "password"
+          volumeMounts:
+            - name: fcm-cred-volume
+              mountPath: /credentials.json
+              subPath: credentials.json
+              readOnly: true
+            - name: tls-volume
+              mountPath: /cert
+              readOnly: true
+      volumes:
+        - name: fcm-cred-volume
+          configMap:
+            name: fcm-cred
+        - name: tls-volume
+          secret:
+            secretName: fcm-secret
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scp
+  template:
+    metadata:
+      labels:
+        app: scp
+    spec:
+      containers:
+        - name: scp
+          imagePullPolicy: Never
+          image: scp
+          env:
+            - name: GRPC_VERBOSITY
+              value: "DEBUG"
+            - name: FCM_APP_HOST
+              value: "fcm-service"
+            - name: FCM_APP_PORT
+              value: "5551"
+            - name: SCP_APP_HOST
+              value: "0.0.0.0"
+            - name: SCP_APP_PORT
+              value: "5552"
+            - name: VKEY_HOST
+              value: "vkey-service"  # Replace with your Redis service name
+            - name: VKEY_PORT
+              value: "6379"  # Replace with your Redis service name
+            - name: VKEY_PASSWORD
+              value: "password"  # Replace with your Redis service name
+          volumeMounts:
+            - name: tls-volume
+              mountPath: /cert
+              readOnly: true
+            - name: ca-volume
+              mountPath: /ca.crt
+              subPath: ca.crt
+              readOnly: true
+      volumes:
+        - name: tls-volume
+          secret:
+            secretName: scp-secret
+        - name: ca-volume
+          configMap:
+            name: fcm-pubkey
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: valkey
+spec:
+  replicas: 1  # typically runs as a single instance
+  selector:
+    matchLabels:
+      app: valkey
+  template:
+    metadata:
+      labels:
+        app: valkey
+    spec:
+      containers:
+        - name: valkey
+          image: valkey/valkey:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 6379
+          env:
+            - name: VALKEY_PASSWORD
+              value: "password"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: vkey-service
+spec:
+  selector:
+    app: valkey
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: fcm-service
+spec:
+  selector:
+    app: fcm
+  ports:
+    - protocol: TCP
+      port: 5551
+      targetPort: 5551
+  type: ClusterIP
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: scp-service
+spec:
+  selector:
+    app: scp
+  ports:
+    - protocol: TCP
+      name: fcm-port
+      port: 5551
+      targetPort: 5551
+    - protocol: TCP
+      name: client-facing-port
+      port: 5552
+      targetPort: 5552
+  type: ClusterIP

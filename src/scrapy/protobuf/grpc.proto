@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package protobuf;
+
+import "google/protobuf/empty.proto";
+option go_package = "./";
+
+message LookupRequest {
+  string name = 1;
+}
+
+message TokenSyncRequest {
+  string name = 1;
+  string token = 2;
+}
+
+message QueueRequest {
+  repeated string name = 1;
+}
+
+service LookupRequestService {
+  rpc Lookup(LookupRequest) returns (google.protobuf.Empty) {}
+  rpc SetToken(TokenSyncRequest) returns (google.protobuf.Empty) {}
+}
+
+service QueueRequestService {
+  rpc Queue(QueueRequest) returns (google.protobuf.Empty) {}
+}

@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+package protobuf;
+
+import "google/protobuf/empty.proto";
+option go_package = "./";
+
+message QueueRequest {
+  repeated string name = 1;
+}
+
+service QueueRequestService {
+  rpc Queue(QueueRequest) returns (google.protobuf.Empty) {}
+}
